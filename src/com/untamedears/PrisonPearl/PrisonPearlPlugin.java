@@ -379,8 +379,11 @@ public class PrisonPearlPlugin extends JavaPlugin implements Listener {
 
 		switch (event.getType()) {
 		case SUMMONED:
-			player.sendMessage(ChatColor.RED+"You've been summoned to your prison pearl!");
-			player.teleport(fuzzLocation(event.getLocation()));
+                        player.sendMessage(ChatColor.RED+"You've been summoned to your prison pearl!");
+                        player.teleport(fuzzLocation(event.getLocation()));
+                        break;
+		case ESCAPED:
+			player.teleport(event.getLocation());
 			break;
 			
 		case RETURNED:

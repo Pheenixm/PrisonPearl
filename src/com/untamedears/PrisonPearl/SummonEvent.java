@@ -5,7 +5,7 @@ import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
 public class SummonEvent extends Event {
-	public enum Type { SUMMONED, RETURNED, KILLED, DIED }
+	public enum Type { SUMMONED, ESCAPED, RETURNED, KILLED, DIED }
 
     private final PrisonPearl pp;
 	private final Type type;

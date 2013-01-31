@@ -111,26 +111,46 @@ public class SummonManager implements Listener, SaveLoad {
 				player.damage(summon.getDamageAmount());
 		}
 	}
-	
-	public boolean summonPearl(PrisonPearl pp) {
-		Player player = pp.getImprisonedPlayer();
-		if (player == null || player.isDead())
-			return false;
-		
-		if (summons.containsKey(player.getName()))
-			return false;
-		
-		Summon summon = new Summon(player.getName(), player.getLocation().add(0, -.5, 0), plugin.getConfig().getInt("summon_damage_radius"), plugin.getConfig().getInt("summon_damage_amt"), true, true, true);
-		summons.put(summon.getSummonedName(), summon);
-		
-		if (!summonEvent(pp, SummonEvent.Type.SUMMONED, pp.getLocation())) {
-			summons.remove(player.getName());
-			return false;
-		}
-		
-		dirty = true;
-		return true;
-	}
+        
+        public boolean summonPearl(PrisonPearl pp) {
+            Player player = pp.getImprisonedPlayer();
+            if (player == null || player.isDead())
+                    return false;
+            
+            if (summons.containsKey(player.getName()))
+                    return false;
+            
+            Summon summon = new Summon(player.getName(), player.getLocation().add(0, -.5, 0), plugin.getConfig().getInt("summon_damage_radius"), plugin.getConfig().getInt("summon_damage_amt"), true, true, true);
+            summons.put(summon.getSummonedName(), summon);
+            
+            if (!summonEvent(pp, SummonEvent.Type.SUMMONED, pp.getLocation())) {
+                    summons.remove(player.getName());
+                    return false;
+            }
+            
+            dirty = true;
+            return true;
+        }
+        
+        public boolean escapePearl(PrisonPearl pp, Location location) {
+            Player player = pp.getImprisonedPlayer();
+            if (player == null || player.isDead())
+                    return false;
+            
+            if (summons.containsKey(player.getName()))
+                    return false;
+            
+            Summon summon = new Summon(player.getName(), player.getLocation().add(0, -.5, 0), plugin.getConfig().getInt("summon_damage_radius"), plugin.getConfig().getInt("summon_damage_amt"), true, true, true);
+            summons.put(summon.getSummonedName(), summon);
+            
+            if (!summonEvent(pp, SummonEvent.Type.ESCAPED, location)) {
+                    summons.remove(player.getName());
+                    return false;
+            }
+            
+            dirty = true;
+            return true;
+        }
 	
 	public boolean returnPearl(PrisonPearl pp) {
 		Summon summon = summons.remove(pp.getImprisonedName());

@@ -16,3 +16,7 @@ prison_motd:
    - by a prison pearl.
    - Type /pplocate to locate your pearl.
 save_ticks: 2400
+escape:
+    enable: true
+    max_distance: 16
+    xp_levels: 5

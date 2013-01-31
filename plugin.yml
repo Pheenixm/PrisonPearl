@@ -8,7 +8,12 @@ commands:
       description: Locates your prison pearl
       usage: /<command>
       aliases: ppl
-  
+   
+   ppescape:
+      description: Attempts an escape
+      usage: /<command>
+      aliases: ppe
+   
    pplocateany:
       description: Locates any prison pearl in the world
       usage: /<command> player

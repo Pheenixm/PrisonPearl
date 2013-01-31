@@ -4,7 +4,10 @@ import java.util.Map.Entry;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -20,6 +23,9 @@ class PrisonPearlCommands implements CommandExecutor {
 	private final PrisonPearlManager pearlman;
 	private final SummonManager summonman;
 	private final BroadcastManager broadcastman;
+	private final boolean enableEscape;
+	private final int xpLevelsToEscape;
+	private final int maxEscapeDistance;
 	
 	public PrisonPearlCommands(PrisonPearlPlugin plugin, DamageLogManager damageman, PrisonPearlStorage pearls, PrisonPearlManager pearlman, SummonManager summonman, BroadcastManager broadcastman) {
 		this.plugin = plugin;
@@ -28,20 +34,26 @@ class PrisonPearlCommands implements CommandExecutor {
 		this.pearlman = pearlman;
 		this.summonman = summonman;
 		this.broadcastman = broadcastman;
+		
+		enableEscape = plugin.getConfig().getBoolean("escape.enable");
+                xpLevelsToEscape = plugin.getConfig().getInt("escape.xp_levels");
+                maxEscapeDistance = plugin.getConfig().getInt("escape.max_distance");
 	}
 	
 	@Override
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 		if (label.equalsIgnoreCase("pplocate") || label.equalsIgnoreCase("ppl")) {
 			return locateCmd(sender, args, false);
-		} else if (label.equalsIgnoreCase("pplocateany")) {
-			return locateCmd(sender, args, true);
+                } else if (label.equalsIgnoreCase("pplocateany")) {
+                        return locateCmd(sender, args, true);
+                } else if (label.equalsIgnoreCase("ppescape")) {
+                        return escapeCmd(sender, args, true);
 		} else if (label.equalsIgnoreCase("ppfree") || label.equalsIgnoreCase("ppf")) {
 			return freeCmd(sender, args, false);
 		} else if (label.equalsIgnoreCase("ppfreeany")) {
 			return freeCmd(sender, args, true);
-		} else if (label.equalsIgnoreCase("ppsummon") || label.equalsIgnoreCase("pps")) {
-			return summonCmd(sender, args);
+                } else if (label.equalsIgnoreCase("ppsummon") || label.equalsIgnoreCase("pps")) {
+                        return summonCmd(sender, args);
 		} else if (label.equalsIgnoreCase("ppreturn") || label.equalsIgnoreCase("ppr")) {
 			return returnCmd(sender, args);
 		} else if (label.equalsIgnoreCase("ppkill") || label.equalsIgnoreCase("ppk")) {
@@ -216,46 +228,138 @@ class PrisonPearlCommands implements CommandExecutor {
     }
 
     private boolean locateCmd(CommandSender sender, String args[], boolean any) {
-		String name_is;
-		String name_possesive;
-		PrisonPearl pp;
-		
-		if (!any) {
-			if (args.length != 0)
-				return false;
-			
-			if (!(sender instanceof Player)) {
-				sender.sendMessage("Must use pplocateany at the console");
-				return true;
-			}
-				
-			name_is = "You are";
-			name_possesive = "Your";
-			pp = pearls.getByImprisoned((Player)sender);
-		} else {
-			if (args.length != 1)
-				return false;
-			
-			name_is = args[0] + " is";
-			name_possesive = args[0] + "'s";
-			pp = pearls.getByImprisoned(args[0]);
-		}
-		
-		if (pp != null) {
-			if (!pp.verifyLocation()) {
-				System.err.println("PrisonPearl for " + pp.getImprisonedName() + " didn't validate, so is now set free");
-				pearlman.freePearl(pp);
-			} else {
-				sender.sendMessage(ChatColor.GREEN + name_possesive + " prison pearl is " + pp.describeLocation());
-				if (sender instanceof Player && !any)
-					broadcastman.broadcast((Player)sender, ChatColor.GREEN + pp.getImprisonedName() + ": " + pp.describeLocation());
-			}
-		} else {
-			sender.sendMessage(name_is + " not imprisoned");
-		}
-		
-		return true;
-	}
+                String name_is;
+                String name_possesive;
+                PrisonPearl pp;
+                
+                if (!any) {
+                        if (args.length != 0)
+                                return false;
+                        
+                        if (!(sender instanceof Player)) {
+                                sender.sendMessage("Must use pplocateany at the console");
+                                return true;
+                        }
+                                
+                        name_is = "You are";
+                        name_possesive = "Your";
+                        pp = pearls.getByImprisoned((Player)sender);
+                } else {
+                        if (args.length != 1)
+                                return false;
+                        
+                        name_is = args[0] + " is";
+                        name_possesive = args[0] + "'s";
+                        pp = pearls.getByImprisoned(args[0]);
+                }
+                
+                if (pp != null) {
+                        if (!pp.verifyLocation()) {
+                                System.err.println("PrisonPearl for " + pp.getImprisonedName() + " didn't validate, so is now set free");
+                                pearlman.freePearl(pp);
+                        } else {
+                                sender.sendMessage(ChatColor.GREEN + name_possesive + " prison pearl is " + pp.describeLocation());
+                                if (sender instanceof Player && !any)
+                                        broadcastman.broadcast((Player)sender, ChatColor.GREEN + pp.getImprisonedName() + ": " + pp.describeLocation());
+                        }
+                } else {
+                        sender.sendMessage(name_is + " not imprisoned");
+                }
+                
+                return true;
+        }
+
+        private boolean escapeCmd(CommandSender sender, String args[], boolean any) {
+                if (!(sender instanceof Player)) return true;
+                Player player = (Player) sender;
+                
+                if (!enableEscape) {
+                    sender.sendMessage("You cannot escape");
+                    return true;
+                }
+                
+                PrisonPearl pp;
+                pp = pearls.getByImprisoned((Player)sender);
+                
+                if (pp != null) {
+                        if (!pp.verifyLocation()) {
+                                System.err.println("PrisonPearl for " + pp.getImprisonedName() + " didn't validate, so is now set free");
+                                pearlman.freePearl(pp);
+                        } else {
+                                //check if the pearled player is combat tagged
+                                if (plugin.isCombatTagged(pp.getImprisonedName())) {
+                                        sender.sendMessage(ChatColor.RED+"[PrisonPearl]"+ChatColor.WHITE+" You cannot escape while combat tagged.");
+                                        return true;
+                                }
+                                
+                                if (pp.getImprisonedPlayer() == null || pp.getImprisonedPlayer().isDead()) {
+                                        sender.sendMessage("You cannot escape");
+                                        return true;
+                                } else if (summonman.isSummoned(pp)) {
+                                        sender.sendMessage("You cannot escape while summoned");
+                                        return true;
+                                } else if (pp.getHolderPlayer() != null) {
+                                        sender.sendMessage("You cannot escape while your pearl is held by a player");
+                                        return true;
+                                } else if (player.getLevel() < xpLevelsToEscape) {
+                                        sender.sendMessage("You do not have enough exp to attempt an escape");
+                                        return true;
+                                }
+                                
+                                player.setLevel(player.getLevel() - xpLevelsToEscape);
+                                
+                                Location escapePoint = findEscapePoint(pp);
+                                if (escapePoint == null) {
+                                    // Pearl hasn't been properly installed below a cell - escape fully
+                                    sender.sendMessage("Escaping...");
+                                    pearlman.freePearl(pp);
+                                } else {
+                                    if (summonman.escapePearl(pp, escapePoint))
+                                            sender.sendMessage("Escaping...");
+                                    else
+                                            sender.sendMessage("You failed to escape");
+                                }
+                        }
+                } else {
+                        sender.sendMessage("You are not imprisoned");
+                }
+                
+                return true;
+        }
+        
+        private Location findEscapePoint(PrisonPearl pp) {
+                Location location = null;
+                
+                BlockFace direction = BlockFace.UP;
+                int dx = direction.getModX();
+                int dy = direction.getModY();
+                int dz = direction.getModZ();
+                
+                Location candidate = pp.getLocation();
+                int safeSpaces = 0;
+                boolean safeFloor = false;
+                
+                for (int i = 0; i < maxEscapeDistance; i++) {
+                    Block blockAtPoint = candidate.getBlock();
+                    if (blockAtPoint == null || blockAtPoint.isEmpty()) {
+                        safeSpaces = safeSpaces + 1;
+                        if (safeFloor && safeSpaces == 2) {
+                            return location;
+                        }
+                    } else if (blockAtPoint.isLiquid()) {
+                        safeFloor = false;
+                    } else {
+                        safeFloor = true;
+                        safeSpaces = 0;
+                    }
+                    location = candidate;
+                    candidate = new Location(candidate.getWorld(), candidate.getX() + dx, candidate.getY() + dy, candidate.getZ() + dz);
+                }
+                
+                System.out.println("No escape point found");
+                
+                return null;
+        }
 	
 	private boolean freeCmd(CommandSender sender, String args[], boolean any) {
 		PrisonPearl pp;
